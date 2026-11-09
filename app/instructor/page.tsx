@@ -5,7 +5,6 @@ import { BookOpen, CheckCircle2, FilePlus2, LayoutDashboard, Loader2, Plus, Shie
 import { createClient } from '@/lib/supabase/client'
 
 export default function InstructorPage() {
-  const supabase = createClient()
   const [courses, setCourses] = useState<{ id: string; title: string; description: string; level: string; published: boolean }[]>([])
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -16,6 +15,7 @@ export default function InstructorPage() {
 
   useEffect(() => {
     let active = true
+    const supabase = createClient()
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setMessage('Sign in as an instructor to manage content.'); setLoading(false); return }
