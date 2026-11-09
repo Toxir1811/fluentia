@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 import {
   ArrowUpRight,
   BarChart3,
@@ -15,6 +16,7 @@ import {
   Home,
   Languages,
   LayoutDashboard,
+  LockKeyhole,
   Menu,
   MessageCircle,
   MoreHorizontal,
@@ -75,10 +77,27 @@ function WorkspaceScreen({ active, role }: { active: string; role: string }) {
   if (active === 'My courses') return <section className="workspace-screen"><div className="screen-heading"><div><p className="eyebrow">MY LEARNING</p><h2>Courses from your instructors.</h2><p className="subhead">Published lessons appear here in real time as instructors release them.</p></div><BookOpen size={26} className="screen-icon" /></div><div className="empty-learning"><BookOpen size={24} /><h3>No published courses yet</h3><p>Your instructor workspace is ready. New lessons will appear here automatically.</p><Link href="/instructor" className="primary-button">Open instructor studio <ArrowUpRight size={15} /></Link></div></section>
   if (active === 'Messages') return <section className="workspace-screen"><div className="screen-heading"><div><p className="eyebrow">CONNECT</p><h2>Messages</h2><p className="subhead">Stay connected with instructors and parents in one secure place.</p></div><MessageCircle size={26} className="screen-icon" /></div><div className="empty-learning"><MessageCircle size={24} /><h3>Your inbox is clear</h3><p>When an instructor sends an update, it will appear here.</p></div></section>
   if (active === 'Results') return <section className="workspace-screen"><div className="screen-heading"><div><p className="eyebrow">YOUR PROGRESS</p><h2>Results that belong to you.</h2><p className="subhead">Every completed attempt will be stored securely and shown with explanations.</p></div><BarChart3 size={26} className="screen-icon" /></div><div className="empty-learning"><Trophy size={24} /><h3>No completed attempts yet</h3><p>Start a practice test and your score, explanations, and transcript will be saved here.</p><button className="primary-button" onClick={() => window.location.reload()}>Back to overview</button></div></section>
+  if (active === 'Settings') return <section className="workspace-screen"><div className="screen-heading"><div><p className="eyebrow">ACCOUNT SETTINGS</p><h2>Control your learning space.</h2><p className="subhead">Your account and learning records are protected by Supabase authentication and row-level security.</p></div><Settings2 size={26} className="screen-icon" /></div><div className="settings-grid"><div><strong>Notifications</strong><span>Practice reminders and instructor updates</span></div><div><strong>Privacy</strong><span>Your attempts and essays are private by default</span></div><div><strong>Account</strong><span>Change your profile details from your account page</span></div></div><button className="auth-switch" onClick={async () => { await createClient().auth.signOut(); window.location.href = '/login' }}>Sign out</button></section>
   return null
 }
 
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const [status, setStatus] = useState<'loading' | 'signed-out' | 'signed-in'>('loading')
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => setStatus(data.user ? 'signed-in' : 'signed-out'))
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setStatus(session ? 'signed-in' : 'signed-out'))
+    return () => listener.subscription.unsubscribe()
+  }, [])
+
+  if (status === 'loading') return <main className="auth-shell"><div className="auth-card"><div className="auth-mark"><Languages size={19} /></div><h1>Loading your workspace…</h1><p className="subhead">Checking your secure Fluentpath session.</p></div></main>
+  if (status === 'signed-out') return <main className="auth-shell"><div className="auth-card"><div className="auth-mark"><LockKeyhole size={19} /></div><p className="eyebrow">FLUENTPATH WORKSPACE</p><h1>Sign in to continue.</h1><p className="subhead">Your courses, attempts, results, and AI feedback are private to your account.</p><Link href="/login" className="primary-button auth-submit">Sign in or create account <ArrowUpRight size={15} /></Link></div></main>
+  return children
+}
+
 export default function Page() {
+
   const [active, setActive] = useState('Overview')
   const [menuOpen, setMenuOpen] = useState(false)
   const [role, setRole] = useState('Student')
@@ -89,6 +108,7 @@ export default function Page() {
   }, [])
 
   return (
+    <AuthGate>
     <main className="app-shell">
       <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
         <div className="brand-row">
@@ -112,7 +132,7 @@ export default function Page() {
         </nav>
         <div className="sidebar-bottom">
           <div className="streak-card"><div className="streak-icon"><Zap size={16} fill="currentColor" /></div><div><strong>7 day streak</strong><span>Keep it going, Alex!</span></div></div>
-          <button className="nav-item"><Settings2 size={18} /><span>Settings</span></button>
+          <button className={`nav-item ${active === 'Settings' ? 'nav-item-active' : ''}`} onClick={() => setActive('Settings')}><Settings2 size={18} /><span>Settings</span></button>
           <div className="sidebar-footer"><ShieldCheck size={14} /> Your progress is private</div>
         </div>
       </aside>
@@ -149,5 +169,6 @@ export default function Page() {
         </div>
       </section>
     </main>
+    </AuthGate>
   )
 }
